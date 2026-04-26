@@ -1,5 +1,6 @@
 const Booking = require('../models/Booking');
 const Turf = require('../models/Turf');
+const User = require('../models/User');
 const redisClient = require('../config/redisClient');
 
 // POST /api/bookings (Create a booking)
