@@ -59,7 +59,7 @@ pipeline {
                             env.BUILD_BOOKING = 'true'
                         }
                     }
-
+ 
                     echo "Build Gateway: ${env.BUILD_GATEWAY}"
                     echo "Build Auth:    ${env.BUILD_AUTH}"
                     echo "Build Turf:    ${env.BUILD_TURF}"
