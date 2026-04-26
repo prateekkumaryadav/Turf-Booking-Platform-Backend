@@ -25,21 +25,30 @@ pipeline {
         stage('Detect Changes') {
             steps {
                 script {
-                    // Get list of changed files compared to previous commit
+                    // Fetch enough history for git diff to work
+                    sh "git fetch --depth=2 origin ${env.GIT_BRANCH ?: 'main'} || true"
+
                     def changes = ''
                     try {
-                        changes = sh(script: "git diff --name-only HEAD~1 HEAD || echo ''", returnStdout: true).trim()
+                        changes = sh(script: "git diff --name-only HEAD~1 HEAD 2>/dev/null", returnStdout: true).trim()
                     } catch (err) {
-                        // First commit or shallow clone — build everything
-                        changes = 'api-gateway/ auth-service/ turf-service/ booking-service/'
+                        changes = ''
                     }
 
-                    echo "Changed files:\n${changes}"
-
-                    env.BUILD_GATEWAY = changes.contains('api-gateway/') ? 'true' : 'false'
-                    env.BUILD_AUTH    = changes.contains('auth-service/') ? 'true' : 'false'
-                    env.BUILD_TURF   = changes.contains('turf-service/') ? 'true' : 'false'
-                    env.BUILD_BOOKING = changes.contains('booking-service/') ? 'true' : 'false'
+                    // If no changes detected (first build, shallow clone, or error) — build everything
+                    if (changes == '') {
+                        echo "No diff detected (first build or shallow clone). Building ALL services."
+                        env.BUILD_GATEWAY = 'true'
+                        env.BUILD_AUTH    = 'true'
+                        env.BUILD_TURF   = 'true'
+                        env.BUILD_BOOKING = 'true'
+                    } else {
+                        echo "Changed files:\n${changes}"
+                        env.BUILD_GATEWAY = changes.contains('api-gateway/') ? 'true' : 'false'
+                        env.BUILD_AUTH    = changes.contains('auth-service/') ? 'true' : 'false'
+                        env.BUILD_TURF   = changes.contains('turf-service/') ? 'true' : 'false'
+                        env.BUILD_BOOKING = changes.contains('booking-service/') ? 'true' : 'false'
+                    }
 
                     echo "Build Gateway: ${env.BUILD_GATEWAY}"
                     echo "Build Auth:    ${env.BUILD_AUTH}"
@@ -122,75 +131,17 @@ pipeline {
         }
 
         // ───────────────────────────────────────────────
-        // Build Docker Images — only for changed services
+        // Build & Push Docker Images — only for changed services
+        // Buildx multi-arch must build+push in one step
         // ───────────────────────────────────────────────
-        stage('Build Docker Images') {
+        stage('Build & Push Docker Images') {
             steps {
                 sh "docker buildx create --use --name multiarch_builder || true"
-
-                script {
-                    if (env.BUILD_GATEWAY == 'true') {
-                        echo 'Building API Gateway Docker image...'
-                        dir('api-gateway') {
-                            sh """
-                            docker buildx build \\
-                              --platform linux/amd64,linux/arm64 \\
-                              -t ${GATEWAY_IMAGE}:${DOCKER_IMAGE_TAG} \\
-                              -t ${GATEWAY_IMAGE}:latest \\
-                              .
-                            """
-                        }
-                    }
-                    if (env.BUILD_AUTH == 'true') {
-                        echo 'Building Auth Service Docker image...'
-                        dir('auth-service') {
-                            sh """
-                            docker buildx build \\
-                              --platform linux/amd64,linux/arm64 \\
-                              -t ${AUTH_IMAGE}:${DOCKER_IMAGE_TAG} \\
-                              -t ${AUTH_IMAGE}:latest \\
-                              .
-                            """
-                        }
-                    }
-                    if (env.BUILD_TURF == 'true') {
-                        echo 'Building Turf Service Docker image...'
-                        dir('turf-service') {
-                            sh """
-                            docker buildx build \\
-                              --platform linux/amd64,linux/arm64 \\
-                              -t ${TURF_IMAGE}:${DOCKER_IMAGE_TAG} \\
-                              -t ${TURF_IMAGE}:latest \\
-                              .
-                            """
-                        }
-                    }
-                    if (env.BUILD_BOOKING == 'true') {
-                        echo 'Building Booking Service Docker image...'
-                        dir('booking-service') {
-                            sh """
-                            docker buildx build \\
-                              --platform linux/amd64,linux/arm64 \\
-                              -t ${BOOKING_IMAGE}:${DOCKER_IMAGE_TAG} \\
-                              -t ${BOOKING_IMAGE}:latest \\
-                              .
-                            """
-                        }
-                    }
-                }
-            }
-        }
-
-        // ───────────────────────────────────────────────
-        // Push Docker Images — only for changed services
-        // ───────────────────────────────────────────────
-        stage('Push Docker Images') {
-            steps {
                 sh "echo ${DOCKER_HUB_CREDS_PSW} | docker login -u ${DOCKER_HUB_CREDS_USR} --password-stdin"
 
                 script {
                     if (env.BUILD_GATEWAY == 'true') {
-                        echo 'Pushing API Gateway image...'
+                        echo 'Building & Pushing API Gateway image...'
                         dir('api-gateway') {
                             sh """
                             docker buildx build \\
@@ -202,7 +153,7 @@ pipeline {
                         }
                     }
                     if (env.BUILD_AUTH == 'true') {
-                        echo 'Pushing Auth Service image...'
+                        echo 'Building & Pushing Auth Service image...'
                         dir('auth-service') {
                             sh """
                             docker buildx build \\
@@ -214,7 +165,7 @@ pipeline {
                         }
                     }
                     if (env.BUILD_TURF == 'true') {
-                        echo 'Pushing Turf Service image...'
+                        echo 'Building & Pushing Turf Service image...'
                         dir('turf-service') {
                             sh """
                             docker buildx build \\
@@ -226,7 +177,7 @@ pipeline {
                         }
                     }
                     if (env.BUILD_BOOKING == 'true') {
-                        echo 'Pushing Booking Service image...'
+                        echo 'Building & Pushing Booking Service image...'
                         dir('booking-service') {
                             sh """
                             docker buildx build \\
