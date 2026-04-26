@@ -48,6 +48,16 @@ pipeline {
                         env.BUILD_AUTH    = changes.contains('auth-service/') ? 'true' : 'false'
                         env.BUILD_TURF   = changes.contains('turf-service/') ? 'true' : 'false'
                         env.BUILD_BOOKING = changes.contains('booking-service/') ? 'true' : 'false'
+
+                        // If no service directory matched (e.g. only Jenkinsfile or root files changed),
+                        // build everything — ensures images exist after pipeline-only commits
+                        if (env.BUILD_GATEWAY == 'false' && env.BUILD_AUTH == 'false' && env.BUILD_TURF == 'false' && env.BUILD_BOOKING == 'false') {
+                            echo "No service directories changed (root-level change). Building ALL services."
+                            env.BUILD_GATEWAY = 'true'
+                            env.BUILD_AUTH    = 'true'
+                            env.BUILD_TURF   = 'true'
+                            env.BUILD_BOOKING = 'true'
+                        }
                     }
 
                     echo "Build Gateway: ${env.BUILD_GATEWAY}"
