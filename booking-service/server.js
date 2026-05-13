@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const logger = require('./utils/logger');
 dotenv.config();
 
 const connectDB = require('./config/db');
@@ -32,7 +33,7 @@ app.get('/', (req, res) => {
 if (require.main === module) {
   const PORT = process.env.PORT || 5003;
   app.listen(PORT, () => {
-    console.log(`Booking Service running on port ${PORT}`);
+    logger.info(`Booking Service running on port ${PORT}`);
   });
 }
 

@@ -1,5 +1,6 @@
 const express = require('express');
 const { createProxyMiddleware } = require('http-proxy-middleware');
+const logger = require('./utils/logger');
 
 const app = express();
 
@@ -32,7 +33,7 @@ app.use('/api/bookings', createProxyMiddleware({
 if (require.main === module) {
   const PORT = process.env.PORT || 5000;
   app.listen(PORT, () => {
-    console.log(`API Gateway running on port ${PORT}`);
+    logger.info(`API Gateway running on port ${PORT}`);
   });
 }
 

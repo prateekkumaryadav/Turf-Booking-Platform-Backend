@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const logger = require('./utils/logger');
 dotenv.config(); // Must be called before passport
 
 const session = require('express-session');
@@ -44,7 +45,7 @@ app.get('/', (req, res) => {
 if (require.main === module) {
   const PORT = process.env.PORT || 5001;
   app.listen(PORT, () => {
-    console.log(`Auth Service running on port ${PORT}`);
+    logger.info(`Auth Service running on port ${PORT}`);
   });
 }
 
