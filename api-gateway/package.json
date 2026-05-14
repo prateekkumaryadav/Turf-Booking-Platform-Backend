@@ -9,7 +9,10 @@
   },
   "dependencies": {
     "express": "^5.2.1",
+    "express-rate-limit": "^8.5.1",
     "http-proxy-middleware": "^3.0.3",
+    "ioredis": "^5.10.1",
+    "rate-limit-redis": "^5.0.0",
     "winston": "^3.19.0"
   },
   "devDependencies": {
